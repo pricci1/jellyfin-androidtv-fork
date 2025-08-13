@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.core.content.edit
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.tvprovider.media.tv.Channel
@@ -80,10 +81,16 @@ class LeanbackChannelWorker(
 		// Check for "android.media.tv" provider to workaround a false-positive in the previous check
 		&& context.packageManager.resolveContentProvider(TvContractCompat.AUTHORITY, 0) != null
 
+	private val isEnabled = userPreferences[UserPreferences.homeRecommendationsEnabled]
+
 	/**
 	 * Update all channels for the currently authenticated user.
 	 */
 	override suspend fun doWork(): Result = when {
+		!isEnabled -> {
+			removeExistingItems()
+			Result.success()
+		}
 		// Fail when not supported
 		!isSupported -> Result.failure()
 		// Retry later if no authenticated user is found
@@ -171,6 +178,15 @@ class LeanbackChannelWorker(
 
 			Result.retry()
 		}
+	}
+
+	private fun removeExistingItems() {
+		context.contentResolver.delete(WatchNextPrograms.CONTENT_URI, null, null)
+		context.contentResolver.delete(TvContractCompat.PreviewPrograms.CONTENT_URI, null, null)
+		context.contentResolver.delete(TvContractCompat.Programs.CONTENT_URI, null, null)
+		context.contentResolver.delete(TvContractCompat.Channels.CONTENT_URI, null, null)
+
+		context.getSharedPreferences("leanback_channels", Context.MODE_PRIVATE).edit { clear() }
 	}
 
 	/**
