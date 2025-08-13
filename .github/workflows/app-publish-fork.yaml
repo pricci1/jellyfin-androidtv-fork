@@ -4,12 +4,12 @@ on:
   push:
     tags:
       - v*
-permissions:
-  contents: write
 
 jobs:
   publish:
     name: Publish
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     if: ${{ contains(github.repository_owner, 'pricci1') }}
     steps:
@@ -29,9 +29,10 @@ jobs:
         run: ./gradlew assemble bundleRelease versionTxt
       - name: Prepare release archive
         run: |
+          ls -al app/build
           mkdir -p build/jellyfin-publish
-          mv app/build/outputs/apk/*/jellyfin-androidtv-*-debug.apk build/jellyfin-publish/
-          mv app/build/outputs/apk/*/jellyfin-androidtv-*-release-unsigned.apk build/jellyfin-publish/
+          # mv app/build/outputs/apk/*/jellyfin-androidtv-*-debug.apk build/jellyfin-publish/
+          mv app/build/outputs/apk/release/jellyfin-androidtv-*-release-unsigned.apk build/jellyfin-publish/
           mv app/build/version.txt build/jellyfin-publish/
       - name: Upload release archive to GitHub release
         uses: alexellis/upload-assets@13926a61cdb2cb35f5fdef1c06b8b591523236d3 # 0.4.1
@@ -39,3 +40,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           asset_paths: '["build/jellyfin-publish/*"]'
+      - name: Create GH release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -al build/jellyfin-publish/
+          tag="${GITHUB_REF#refs/tags/}"
+
+          gh release create "$tag" \
+            --title="$tag" \
+            --draft \
+            build/jellyfin-publish/*.apk
+
