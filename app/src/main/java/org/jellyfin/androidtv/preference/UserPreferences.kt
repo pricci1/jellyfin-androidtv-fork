@@ -33,6 +33,8 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 	sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 ) {
 	companion object {
+		var homeRecommendationsEnabled = booleanPreference("pref_show_home_recommendations", true)
+
 		/* Display */
 		/**
 		 * Select the app theme
