@@ -1,0 +1,38 @@
+name: App / Publish FORK
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-24.04
+    if: ${{ contains(github.repository_owner, 'pricci1') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Setup Java
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b # v4.6.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+      - name: Set JELLYFIN_VERSION
+        run: echo "JELLYFIN_VERSION=$(echo ${GITHUB_REF#refs/tags/v} | tr / -)" >> $GITHUB_ENV
+      - name: Assemble release files
+        run: ./gradlew assemble bundleRelease versionTxt
+      - name: Prepare release archive
+        run: |
+          mkdir -p build/jellyfin-publish
+          mv app/build/outputs/apk/*/jellyfin-androidtv-*-debug.apk build/jellyfin-publish/
+          mv app/build/outputs/apk/*/jellyfin-androidtv-*-release-unsigned.apk build/jellyfin-publish/
+          mv app/build/version.txt build/jellyfin-publish/
+      - name: Upload release archive to GitHub release
+        uses: alexellis/upload-assets@13926a61cdb2cb35f5fdef1c06b8b591523236d3 # 0.4.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_paths: '["build/jellyfin-publish/*"]'
