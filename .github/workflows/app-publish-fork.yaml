@@ -34,12 +34,6 @@ jobs:
           # mv app/build/outputs/apk/*/jellyfin-androidtv-*-debug.apk build/jellyfin-publish/
           mv app/build/outputs/apk/release/jellyfin-androidtv-*-release-unsigned.apk build/jellyfin-publish/
           mv app/build/version.txt build/jellyfin-publish/
-      - name: Upload release archive to GitHub release
-        uses: alexellis/upload-assets@13926a61cdb2cb35f5fdef1c06b8b591523236d3 # 0.4.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          asset_paths: '["build/jellyfin-publish/*"]'
       - name: Create GH release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
