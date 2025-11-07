@@ -25,6 +25,12 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 		setTitle(R.string.pref_customization)
 
 		category {
+			checkbox {
+				setTitle(R.string.pref_show_home_recommendations)
+				setContent(R.string.pref_show_home_recommendations)
+				bind(userPreferences, UserPreferences.homeRecommendationsEnabled)
+			}
+
 			setTitle(R.string.pref_theme)
 
 			enum<AppTheme> {
