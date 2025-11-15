@@ -1,0 +1,58 @@
+name: App / Publish FORK
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    name: Publish
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    if: ${{ contains(github.repository_owner, 'pricci1') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Setup Java
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+      - name: Set JELLYFIN_VERSION
+        run: echo "JELLYFIN_VERSION=$(echo ${GITHUB_REF#refs/tags/v} | tr / -)" >> $GITHUB_ENV
+      - name: Assemble release files
+        run: ./gradlew assemble bundleRelease versionTxt
+      - name: Sign APK
+        id: signApk
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407 # tag=v1
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Prepare release archive
+        run: |
+          ls -al app/build
+          mkdir -p build/jellyfin-publish
+          # mv app/build/outputs/apk/*/jellyfin-androidtv-*-debug.apk build/jellyfin-publish/
+          mv ${{ steps.signApk.outputs.signedReleaseFile }} build/jellyfin-publish/jellyfin-androidtv-v${{ env.JELLYFIN_VERSION }}-release.apk
+          mv app/build/outputs/apk/release/jellyfin-androidtv-*-release-unsigned.apk build/jellyfin-publish/
+          mv app/build/version.txt build/jellyfin-publish/
+      - name: Create GH release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -al build/jellyfin-publish/
+          tag="${GITHUB_REF#refs/tags/}"
+
+          gh release create "$tag" \
+            --title="$tag" \
+            --draft \
+            build/jellyfin-publish/*.apk
